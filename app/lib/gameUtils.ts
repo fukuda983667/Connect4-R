@@ -206,9 +206,3 @@ export function cleanupOldWaitingPlayers(waitingPlayers: WaitingPlayer[]): Waiti
 
   return cleanedPlayers;
 }
-
-
-
-
-
-

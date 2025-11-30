@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cache } from '@/app/lib/cache';
-import { createEmptyBoard, type Game, type Player } from '@/app/lib/gameUtils';
+import { redisCache } from '@/app/lib/redisCache';
+import { createEmptyBoard, type Game, type Player, type WaitingPlayer } from '@/app/lib/gameUtils';
 import { broadcastGameEvent } from '@/app/lib/pusherServer';
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const firstPlayer: Player = Math.random() < 0.5
       ? { id: opponent_id, name: opponent_name, color: 'red' }
       : { id: player_id, name: player_name, color: 'red' };
-    
+
     const secondPlayer: Player = firstPlayer.id === opponent_id
       ? { id: player_id, name: player_name, color: 'yellow' }
       : { id: opponent_id, name: opponent_name, color: 'yellow' };
@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
     };
 
     // 仮マッチング状態のゲームを保存
-    const activeGames = cache.get<Record<string, Game>>('active_games') || {};
+    const activeGames = (await redisCache.get<Record<string, Game>>('active_games')) || {};
     activeGames[game_id] = game;
-    cache.set('active_games', activeGames, 300);
+    await redisCache.set('active_games', activeGames, 300);
 
     // 相手（waitingプレイヤー）に仮マッチング通知を送信
     await broadcastGameEvent.tentativeMatch(game_id, player_id, player_name);
@@ -68,13 +68,13 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(resolve => setTimeout(resolve, 500)); // 0.5秒待機
-      confirmed = cache.get<boolean>(confirmKey) || false;
+      confirmed = (await redisCache.get<boolean>(confirmKey)) || false;
 
     console.log(`相手の応答チェック (${i + 1}/${maxAttempts}):`, {
       confirmed,
       cache_key: confirmKey,
-      cache_value: cache.get(confirmKey),
-      all_cache_keys: cache.getAllKeys()
+      cache_value: await redisCache.get(confirmKey),
+      all_cache_keys: await redisCache.getAllKeys()
     });
 
       if (confirmed) {
@@ -100,10 +100,17 @@ export async function POST(request: NextRequest) {
       // 確認が取れたらゲーム開始
       game.status = 'playing';
       activeGames[game_id] = game;
-      cache.set('active_games', activeGames, 300);
+      await redisCache.set('active_games', activeGames, 300);
 
       // 確認キャッシュを削除
-      cache.delete(confirmKey);
+      await redisCache.delete(confirmKey);
+
+      // 両方のプレイヤーを待機リストから削除
+      const waitingPlayers = (await redisCache.get<WaitingPlayer[]>('waiting_players')) || [];
+      const updatedWaitingPlayers = waitingPlayers.filter(
+        (p) => p.player_id !== player_id && p.player_id !== opponent_id
+      );
+      await redisCache.set('waiting_players', updatedWaitingPlayers, 30);
 
       // ゲーム開始イベントを発行
       await broadcastGameEvent.gameStart(game_id, game);
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
 
       // ゲームを削除
       delete activeGames[game_id];
-      cache.set('active_games', activeGames, 300);
+      await redisCache.set('active_games', activeGames, 300);
 
       return NextResponse.json({
         success: false,

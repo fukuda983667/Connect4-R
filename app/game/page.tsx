@@ -11,6 +11,7 @@ import { useRotationAnimation } from '../hooks/useRotationAnimation';
 import { useOnlineMatching } from '../hooks/useOnlineMatching';
 import { useOnlineGame } from '../hooks/useOnlineGame';
 import { createPusherInstance } from '../lib/pusher';
+import { subscribeToGame } from '../lib/pusher';
 import { useRouter } from 'next/navigation';
 
 export default function GamePage() {
@@ -188,7 +189,7 @@ export default function GamePage() {
 
             // ゲームチャンネルに接続
             const pusherInstance = createPusherInstance();
-            const gameChannel = pusherInstance.subscribe(`game.${onlineGame.id}`);
+            const gameChannel = subscribeToGame(pusherInstance, onlineGame.id);
 
             // 接続完了を記録
             gameChannel.bind('pusher:subscription_succeeded', () => {
@@ -441,16 +442,16 @@ export default function GamePage() {
                                             // マッチングタイマーを開始
                                             setMatchingTimerActive(true);
                                             setMatchingTimeLeft(30);
-                                            
+
                                             if (result.type === 'tentative') {
                                                 // 仮マッチング成功 - ready-matchを送信
                                                 console.log('仮マッチング成功、ready-matchを送信');
                                                 const readyResult = await readyMatch(
-                                                    result.gameId, 
-                                                    result.opponentId!, 
+                                                    result.gameId,
+                                                    result.opponentId!,
                                                     result.opponentName!
                                                 );
-                                                
+
                                                 if (readyResult && readyResult.success) {
                                                     // ゲーム開始成功
                                                     console.log('ゲーム開始成功');
@@ -483,16 +484,16 @@ export default function GamePage() {
                                             // マッチングタイマーを開始
                                             setMatchingTimerActive(true);
                                             setMatchingTimeLeft(30);
-                                            
+
                                             if (result.type === 'tentative') {
                                                 // 仮マッチング成功 - ready-matchを送信
                                                 console.log('仮マッチング成功、ready-matchを送信');
                                                 const readyResult = await readyMatch(
-                                                    result.gameId, 
-                                                    result.opponentId!, 
+                                                    result.gameId,
+                                                    result.opponentId!,
                                                     result.opponentName!
                                                 );
-                                                
+
                                                 if (readyResult && readyResult.success) {
                                                     // ゲーム開始成功
                                                     console.log('ゲーム開始成功');
@@ -537,7 +538,7 @@ export default function GamePage() {
     }
 
 
-    // 統一されたゲーム画面
+    // ゲーム画面
     return (
         <div className="container mx-auto py-8">
             <div className="flex flex-col items-center justify-center p-8">
@@ -570,7 +571,7 @@ export default function GamePage() {
 
 
 
-                {/* 回転ボタン（標準機能） */}
+                {/* 回転ボタン */}
                 <div className="flex items-center gap-24 mb-4">
                     <button
                         onClick={() => {

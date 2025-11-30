@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cache } from '@/app/lib/cache';
+import { redisCache } from '@/app/lib/redisCache';
 import {
   getPlayerColor,
   getPlayerByColor,
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const activeGames = cache.get<Record<string, Game>>('active_games') || {};
+    const activeGames = (await redisCache.get<Record<string, Game>>('active_games')) || {};
 
     if (!activeGames[game_id]) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     activeGames[game_id] = game;
-    cache.set('active_games', activeGames, 300);
+    await redisCache.set('active_games', activeGames, 300);
 
     // 他のプレイヤーに手を通知
     await broadcastGameEvent.gameMove(game_id, game, column, row, playerColor, player_id, false);

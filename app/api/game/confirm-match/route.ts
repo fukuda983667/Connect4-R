@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cache } from '@/app/lib/cache';
+import { redisCache } from '@/app/lib/redisCache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
 
     // キャッシュに確認を保存（10秒間）
     const confirmKey = `match_confirm_${game_id}_${player_id}`;
-    cache.set(confirmKey, true, 10);
+    await redisCache.set(confirmKey, true, 10);
 
     console.log('confirm-match受信', {
       game_id,
       player_id,
       cache_key: confirmKey,
-      cache_saved: cache.get(confirmKey),
+      cache_saved: await redisCache.get(confirmKey),
       cache_set_success: true
     });
 

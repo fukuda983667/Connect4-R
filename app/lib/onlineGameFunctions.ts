@@ -99,7 +99,7 @@ export const readyMatch = async (
         });
 
         const data = await response.json();
-        console.log('ready-match結果:', data); // デバッグ用
+        // console.log('ready-match結果:', data);
 
         if (data.success) {
             return {
@@ -111,7 +111,7 @@ export const readyMatch = async (
             return {
                 success: false,
                 status: data.status,
-                message: data.message || 'エラーが発生しました' 
+                message: data.message || 'エラーが発生しました'
             };
         }
     } catch (err) {
@@ -137,7 +137,7 @@ export const confirmMatch = async (
         });
 
         const data = await response.json();
-        console.log('confirm-match結果:', data); // デバッグ用
+        // console.log('confirm-match結果:', data);
 
         return {
             success: data.success,

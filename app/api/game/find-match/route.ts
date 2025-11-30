@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { cache } from '@/app/lib/cache';
+import { redisCache } from '@/app/lib/redisCache';
 import { cleanupOldWaitingPlayers, type WaitingPlayer } from '@/app/lib/gameUtils';
 
 export async function POST(request: NextRequest) {
@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 古い待機プレイヤーをクリーンアップ
-    const waitingPlayers = cache.get<WaitingPlayer[]>('waiting_players') || [];
+    const waitingPlayers = (await redisCache.get<WaitingPlayer[]>('waiting_players')) || [];
     const cleanedPlayers = cleanupOldWaitingPlayers(waitingPlayers);
-    cache.set('waiting_players', cleanedPlayers, 30);
+    await redisCache.set('waiting_players', cleanedPlayers, 30);
 
     console.log('マッチング要求', {
       player_id,
@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     // 既に待機中のプレイヤーがいるかチェック
     if (cleanedPlayers.length > 0) {
       const opponent = cleanedPlayers.shift()!;
-      cache.set('waiting_players', cleanedPlayers, 30);
+      // tentative状態になった時点で待機リストから除外
+      await redisCache.set('waiting_players', cleanedPlayers, 30);
 
       // 相手のゲームIDを使用
       const gameId = opponent.game_id;
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     };
 
     cleanedPlayers.push(newWaitingPlayer);
-    cache.set('waiting_players', cleanedPlayers, 30);
+    await redisCache.set('waiting_players', cleanedPlayers, 30);
 
     console.log('プレイヤーを待機リストに追加', {
       player_id,
@@ -81,8 +82,26 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('findMatchでエラーが発生しました:', error);
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+
+    // Redis接続エラーの場合、より詳細なメッセージを返す
+    if (errorMessage.includes('Redis') || errorMessage.includes('ECONNREFUSED')) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Redis接続エラーが発生しました。Redisサーバーが起動しているか確認してください。',
+          error: errorMessage
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, message: 'サーバー内部エラーが発生しました' },
+      {
+        success: false,
+        message: 'サーバー内部エラーが発生しました',
+        error: errorMessage
+      },
       { status: 500 }
     );
   }

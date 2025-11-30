@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cache } from '@/app/lib/cache';
+import { redisCache } from '@/app/lib/redisCache';
 import { type Game } from '@/app/lib/gameUtils';
 
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const activeGames = cache.get<Record<string, Game>>('active_games') || {};
+    const activeGames = (await redisCache.get<Record<string, Game>>('active_games')) || {};
 
     if (!activeGames[game_id]) {
       return NextResponse.json(

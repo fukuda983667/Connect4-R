@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cache } from '@/app/lib/cache';
+import { redisCache } from '@/app/lib/redisCache';
 import { type Game, type WaitingPlayer } from '@/app/lib/gameUtils';
 import { broadcastGameEvent } from '@/app/lib/pusherServer';
 
@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const activeGames = cache.get<Record<string, Game>>('active_games') || {};
-    const waitingPlayers = cache.get<WaitingPlayer[]>('waiting_players') || [];
+    const activeGames = (await redisCache.get<Record<string, Game>>('active_games')) || {};
+    const waitingPlayers = (await redisCache.get<WaitingPlayer[]>('waiting_players')) || [];
 
     if (activeGames[game_id]) {
       const game = activeGames[game_id];
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
       // ゲームを削除
       delete activeGames[game_id];
-      cache.set('active_games', activeGames, 300);
+      await redisCache.set('active_games', activeGames, 300);
 
       console.log('プレイヤーがゲームから退出しました', {
         game_id,
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     const filteredWaitingPlayers = waitingPlayers.filter(
       player => player.player_id !== player_id
     );
-    
+
     if (filteredWaitingPlayers.length !== waitingPlayers.length) {
-      cache.set('waiting_players', filteredWaitingPlayers, 30);
+      await redisCache.set('waiting_players', filteredWaitingPlayers, 30);
       console.log('プレイヤーを待機リストから削除しました', {
         player_id,
         remaining_waiting: filteredWaitingPlayers.length

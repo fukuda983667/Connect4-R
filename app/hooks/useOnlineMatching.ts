@@ -140,10 +140,10 @@ export const useOnlineMatching = () => {
     const confirmMatchProcess = useCallback(async (gameId: string) => {
         // 最新の状態をReduxから直接取得
         const currentState = store.getState().onlineGame;
-        console.log('confirmMatchProcess呼び出し:', { 
+        console.log('confirmMatchProcess呼び出し:', {
             gameId,
             myPlayerId: currentState.myPlayerId,
-            gameIdFromState: currentState.id 
+            gameIdFromState: currentState.id
         });
 
         if (!currentState.myPlayerId) {
