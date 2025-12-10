@@ -99,10 +99,12 @@ export default function GamePage() {
     // オンライン対戦の初期化
     useEffect(() => {
         if (gameMode === 'online' && !onlineGame.myPlayerId) {
-            initializePlayer('Player');
+            // 既存のmyPlayerNameがある場合はそれを使用、ない場合は'Player'をデフォルト値として使用
+            const initialName = onlineGame.myPlayerName || 'Player';
+            initializePlayer(initialName);
             setShowOnlineSetup(true);
         }
-    }, [gameMode, onlineGame.myPlayerId, initializePlayer]);
+    }, [gameMode, onlineGame.myPlayerId, onlineGame.myPlayerName, initializePlayer]);
 
     // タイマーの管理
     useEffect(() => {

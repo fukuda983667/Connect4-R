@@ -114,7 +114,7 @@ const onlineGameSlice = createSlice({
             state.error = null;
         },
         resetOnlineGameState: (state) => {
-            // すべての状態をリセット
+            // すべての状態をリセット（myPlayerNameは保持）
             state.id = null;
             state.players = {};
             state.board = Array(7).fill(null).map(() => Array(7).fill(null));
@@ -122,7 +122,6 @@ const onlineGameSlice = createSlice({
             state.status = 'waiting';
             state.winner = undefined;
             state.myPlayerId = null;
-            state.myPlayerName = '';
             state.myPlayerColor = null;
             state.isSearching = false;
             state.isConnected = false;
